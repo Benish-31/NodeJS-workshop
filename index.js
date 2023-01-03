@@ -3,7 +3,6 @@ const bodyParser = require("body-parser");
 const app = express();
 const port = 8080;
 const sqlite = require("sqlite3").verbose();
-let sql;
 const db = new sqlite.Database(
   "./database.db",
   sqlite.OPEN_READWRITE,
@@ -25,12 +24,7 @@ const authenticateKey = (req, res, next) => {
     if (password) {
       next();
     } else {
-      res.status(404).send({
-        error: {
-          code: 404,
-          message: "Wrong Password.",
-        },
-      });
+      res.status(400).send({ error: { code: 403, message: "Wrong Password" } });
     }
   } else {
     res.status(403).send({
@@ -41,52 +35,37 @@ const authenticateKey = (req, res, next) => {
 
 // Task 1: Retrieve all tweets.
 app.get("/tweets", (req, res, next) => {
-  sql = "SELECT * FROM `tweets` ORDER BY `createdAt` DESC";
+  const sql = "SELECT * FROM `tweets` ORDER BY `createdAt` DESC";
   try {
     db.all(sql, (err, rows) => {
-      if (err) return res.json({ status: 300, success: false, error: err });
-
-      return res.json({ status: 200, data: rows, success: true });
+      res.send(rows);
     });
-  } catch (error) {
-    return res.json({
-      status: 400,
-      success: false,
-    });
+  } catch {
+    res.status(400).send({ status: "error" });
   }
 });
 
 // Task 2: Retrieve profile of a user.
 app.get("/users/:id", async (req, res, next) => {
   try {
-    sql = "SELECT * FROM `users` WHERE `id`=?";
+    const sql = "SELECT * FROM `users` WHERE `id`=?";
     db.all(sql, [req.params.id], (err, rows) => {
-      if (err) return res.json({ status: 300, success: false, error: err });
-
-      return res.json({ status: 200, data: rows, success: true });
+      res.send(rows);
     });
   } catch {
-    return res.json({
-      status: 400,
-      success: false,
-    });
+    res.status(400).send({ status: "error" });
   }
 });
 
 // Task 3: Retrieve all tweets of a specified user
 app.get("/users/:id/tweets", (req, res, next) => {
   try {
-    sql = "SELECT * FROM tweets WHERE `author`=?";
+    const sql = "SELECT * FROM tweets WHERE `author`=?";
     db.all(sql, [req.params.id], (err, rows) => {
-      if (err) return res.json({ status: 300, success: false, error: err });
-
-      return res.json({ status: 200, data: rows, success: true });
+      res.send(rows);
     });
   } catch {
-    return res.json({
-      status: 400,
-      success: false,
-    });
+    res.status(400).send({ status: "error" });
   }
 });
 
@@ -98,48 +77,25 @@ app.post("/tweets", (req, res, next) => {
     if (!req.body.content)
       return res.status(400).send({ errorCode: "CONTENT_MISSING" });
     let date = new Date();
-    sql = "INSERT INTO `tweets`(`author`,`content`,`createdAt`) VALUES (?,?,?)";
+    const sql =
+      "INSERT INTO `tweets`(`author`,`content`,`createdAt`) VALUES (?,?,?)";
     db.run(sql, [req.body.author, req.body.content, date], (err) => {
-      if (err) return res.json({ status: 300, success: false, error: err });
-
-      console.log(
-        "successful input ",
-        req.body.author,
-        req.body.content,
-        req.body.createdAt
-      );
+      res.send({ status: "ok" });
     });
-    return res.json({
-      status: 200,
-      success: true,
-    });
-  } catch (error) {
-    return res.json({
-      status: 400,
-      success: false,
-    });
+  } catch {
+    res.status(400).send({ status: "error" });
   }
 });
 
 // Task 5: Delete a tweet
 app.delete("/tweets/:id", (req, res, next) => {
   try {
-    sql = "DELETE FROM `tweets` WHERE `id`=?";
+    const sql = "DELETE FROM `tweets` WHERE `id`=?";
     db.run(sql, [req.params.id], (err) => {
-      if (err) return res.json({ status: 300, success: false, error: err });
-
-      console.log("successful deleted");
+      res.send({ status: "ok", success: true });
     });
-
-    return res.json({
-      status: 200,
-      success: true,
-    });
-  } catch (error) {
-    return res.json({
-      status: 400,
-      success: false,
-    });
+  } catch {
+    res.status(400).send({ status: "error" });
   }
 });
 
@@ -151,26 +107,13 @@ app.post("/tweets", authenticateKey, async (req, res, next) => {
     if (!req.body.content)
       return res.status(400).send({ errorCode: "CONTENT_MISSING" });
     let date = new Date();
-    sql = "INSERT INTO `tweets`(`author`,`content`,`createdAt`) VALUES (?,?,?)";
-    db.run(sql, [req.body.author, req.body.content, date], (err) => {
-      if (err) return res.json({ status: 300, success: false, error: err });
-
-      console.log(
-        "successful input ",
-        req.body.author,
-        req.body.content,
-        req.body.createdAt
-      );
+    const sql =
+      "INSERT INTO `tweets`(`author`,`content`,`createdAt`) VALUES (?,?,?)";
+    db.run(sql, [req.body.author, req.body.content, date], (err, rows) => {
+      res.send(rows);
     });
-    return res.json({
-      status: 200,
-      success: true,
-    });
-  } catch (error) {
-    return res.json({
-      status: 400,
-      success: false,
-    });
+  } catch {
+    res.status(400).send({ status: "error" });
   }
 });
 
@@ -184,97 +127,67 @@ app.post("/users", (req, res, next) => {
     if (!req.body.password)
       return res.status(400).send({ errorCode: "PASSWORD_MISSING" });
 
-    sql = "INSERT INTO `users`(`name`,`email`,`password`) VALUES (?,?,?)";
-    db.run(sql, [req.body.name, req.body.email, req.body.password], (err) => {
-      if (err) return res.json({ status: 300, success: false, error: err });
-
-      console.log(
-        "successful input ",
-        req.body.name,
-        req.body.email,
-        req.body.password
-      );
-    });
-    return res.json({
-      status: 200,
-      success: true,
-    });
-  } catch (error) {
-    return res.json({
-      status: 400,
-      success: false,
-    });
+    const sql = "INSERT INTO `users`(`name`,`email`,`password`) VALUES (?,?,?)";
+    db.run(
+      sql,
+      [req.body.name, req.body.email, req.body.password],
+      (err, rows) => {
+        res.send(rows);
+      }
+    );
+  } catch {
+    res.status(400).send({ status: "error" });
   }
 });
 
 // BONUS: Show all users
 app.get("/users", (req, res, next) => {
   try {
-    sql = "SELECT * FROM `users`";
+    const sql = "SELECT * FROM `users`";
     db.all(sql, (err, rows) => {
-      if (err) return res.json({ status: 300, success: false, error: err });
-
-      return res.json({ status: 200, data: rows, success: true });
+      res.send(rows);
     });
-  } catch (error) {
-    return res.json({
-      status: 400,
-      success: false,
-    });
+  } catch {
+    res.status(400).send({ status: "error" });
   }
 });
 
 // Task 7: User add users to friends list
 app.post("/users/:id/friends", (req, res, next) => {
   try {
-    sql = "INSERT INTO `friends_list`(`friend_id`, `friend_name`) VALUES (?,?)";
+    const sql =
+      "INSERT INTO `friends_list`(`friend_id`, `friend_name`) VALUES (?,?)";
 
     db.run(sql, [req.params.id, req.body.name], (err, rows) => {
-      if (err) return res.json({ status: 300, success: false, error: err });
-
-      console.log("successful input ", req.body.name);
-
-      return res.json({ status: 200, data: rows, success: true });
+      res.send({ status: "ok" });
     });
   } catch {
-    return res.json({
-      status: 400,
-      success: false,
-    });
+    res.status(400).send({ status: "error" });
   }
 });
 
 // Task 7: User delete users from friends list
 app.delete("/users/:id/friends/:name", (req, res, next) => {
   try {
-    sql = "DELETE FROM `friends_list` WHERE `friend_id`=? AND `friend_name`=?";
+    const sql =
+      "DELETE FROM `friends_list` WHERE `friend_id`=? AND `friend_name`=?";
     db.run(sql, [req.params.id, req.params.name], (err, rows) => {
-      if (err) return res.json({ status: 300, success: false, error: err });
-
-      return res.json({ status: 200, data: rows, success: true });
+      res.send({ status: "ok" });
     });
   } catch {
-    return res.json({
-      status: 400,
-      success: false,
-    });
+    res.status(400).send({ status: "error" });
   }
 });
 
 // Task 7: User see his friends list
 app.get("/users/:id/friends", (req, res, next) => {
   try {
-    sql = "SELECT * from `friends_list` WHERE `friend_id`=?";
+    const sql = "SELECT * from `friends_list` WHERE `friend_id`=?";
     db.all(sql, [req.params.id], (err, rows) => {
-      if (err) return res.json({ status: 300, success: false, error: err });
-
-      return res.json({ status: 200, data: rows, success: true });
+      res.send(rows);
     });
   } catch {
-    return res.json({
-      status: 400,
-      success: false,
-    });
+    res.status(400).send({ status: "error" });
   }
 });
 
