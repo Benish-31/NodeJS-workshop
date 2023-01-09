@@ -48,10 +48,10 @@ const authenticateKey = async (req, res, next) => {
 };
 
 // Task 1: Retrieve all tweets.
-app.get("/tweets", (req, res, next) => {
+app.get("/tweets", async (req, res, next) => {
   const sql = "SELECT * FROM `tweets` ORDER BY `createdAt` DESC";
   try {
-    db.all(sql, (err, rows) => {
+    await db.all(sql, (err, rows) => {
       res.send(rows);
     });
   } catch (error) {
@@ -64,7 +64,7 @@ app.get("/users/:id", async (req, res, next) => {
   try {
     const id = req.body.id;
     const sql = "SELECT * FROM `users` WHERE `id`=?";
-    db.all(sql, [id], (err, rows) => {
+    await db.all(sql, [id], (err, rows) => {
       res.send(rows);
     });
   } catch (error) {
@@ -73,11 +73,11 @@ app.get("/users/:id", async (req, res, next) => {
 });
 
 // Task 3: Retrieve all tweets of a specified user
-app.get("/users/:id/tweets", (req, res, next) => {
+app.get("/users/:id/tweets", async (req, res, next) => {
   try {
     const id = req.body.id;
     const sql = "SELECT * FROM tweets WHERE `author`=?";
-    db.all(sql, [id], (err, rows) => {
+    await db.all(sql, [id], (err, rows) => {
       res.send(rows);
     });
   } catch (error) {
@@ -98,7 +98,7 @@ app.post("/tweets", async (req, res, next) => {
     if (user) {
       const sql =
         "INSERT INTO `tweets`(`author`,`content`,`createdAt`) VALUES (?,?,?)";
-      db.run(sql, [author, content, date]);
+      await db.run(sql, [author, content, date]);
       res.send({ code: 201, status: "ok", success: true });
     } else {
       res.send({ code: 400, status: "ok", success: false });
@@ -109,11 +109,11 @@ app.post("/tweets", async (req, res, next) => {
 });
 
 // Task 5: Delete a tweet
-app.delete("/tweets/:id", (req, res, next) => {
+app.delete("/tweets/:id", async (req, res, next) => {
   try {
     const id = req.body.id;
     const sql = "DELETE FROM `tweets` WHERE `id`=?";
-    db.run(sql, [id], (err) => {
+    await db.run(sql, [id], (err) => {
       res.send({ status: "ok", success: true });
     });
   } catch (error) {
@@ -135,7 +135,7 @@ app.post("/tweets", authenticateKey, async (req, res, next) => {
     if (user) {
       const sql =
         "INSERT INTO `tweets`(`author`,`content`,`createdAt`) VALUES (?,?,?)";
-      db.run(sql, [author, content, date]);
+      await db.run(sql, [author, content, date]);
       res.send({ code: 201, status: "ok", success: true });
     } else {
       res.send({ code: 400, status: "ok", success: false });
@@ -178,10 +178,10 @@ app.post("/users", async (req, res, next) => {
 });
 
 // BONUS: Show all users
-app.get("/users", (req, res, next) => {
+app.get("/users", async (req, res, next) => {
   try {
     const sql = "SELECT * FROM `users`";
-    db.all(sql, (err, rows) => {
+    await db.all(sql, (err, rows) => {
       res.send(rows);
     });
   } catch (error) {
@@ -190,12 +190,12 @@ app.get("/users", (req, res, next) => {
 });
 
 // Task 7: User add users to friends list
-app.post("/users/:id/friends", (req, res, next) => {
+app.post("/users/:id/friends", async (req, res, next) => {
   try {
     const id = req.body.id;
     const sql = "INSERT INTO `friends`(`friend_id`) VALUES (?)";
 
-    db.run(sql, [id]);
+    await db.run(sql, [id]);
     res.send({ code: 201, status: "ok", success: true });
   } catch (error) {
     res.status(400).send({ code: 400, message: error });
@@ -203,11 +203,11 @@ app.post("/users/:id/friends", (req, res, next) => {
 });
 
 // Task 7: User delete users from friends list
-app.delete("/users/:id/friends", (req, res, next) => {
+app.delete("/users/:id/friends", async (req, res, next) => {
   try {
     const id = req.body;
     const sql = "DELETE FROM `friends` WHERE `friend_id`=?";
-    db.run(sql, [id], (err, rows) => {
+    await db.run(sql, [id], (err, rows) => {
       res.send({ code: 202, status: "ok", success: true });
     });
   } catch (error) {
@@ -216,13 +216,13 @@ app.delete("/users/:id/friends", (req, res, next) => {
 });
 
 // Task 7: User see his friends list
-app.get("/users/:id/friends", (req, res, next) => {
+app.get("/users/:id/friends", async (req, res, next) => {
   try {
     const id = req.body.id;
     // const sql = "SELECT * from `friends` WHERE `friend_id`=?";
     const sql =
       "SELECT u.* FROM `friends`AS`f`LEFT JOIN`users`AS`u`ON u.id=f.friend2_id WHERE f.friend1_id=?";
-    db.all(sql, [id], (err, rows) => {
+    await db.all(sql, [id], (err, rows) => {
       res.send(rows);
     });
   } catch (error) {
