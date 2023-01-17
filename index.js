@@ -146,7 +146,7 @@ app.post("/tweets", authenticateKey, async (req, res, next) => {
 });
 
 // BONUS: Create a user profile
-app.post("/users", async (req, res, next) => {
+app.post("/users", (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
@@ -155,23 +155,25 @@ app.post("/users", async (req, res, next) => {
     if (!password)
       return res.status(400).send({ errorCode: "PASSWORD_MISSING" });
 
-    const userName = await db("users").first("*").where({ name: name });
+    const hash = bcrypt.hash(password, 10);
 
-    // const user = await db("SELECT * FROM `users` where `name`=?", [name]);
+    const sql = "INSERT INTO `users`(`name`,`email`,`password`) VALUES (?,?,?)";
 
-    const userEmail = await db("users").first("*").where({ email: email });
-
-    // const user = await db("SELECT * FROM `users` where `name`=?", [name]);
-
-    const hash = await bcrypt.hash(password, 10);
-
-    if (userName || userEmail) {
-      res.status(400).json(`${username ? "Name" : "Email"}Exists`);
-    } else {
-      await db("users").insert({ name: name, email: email, password: hash });
-      // await db.run("INSERT INTO `users`(`name`,`email`,`password`) VALUES (?,?,?)", [name, email, hash]);
-    }
-    res.status(201).json("All good!");
+    db.run(sql, [name, email, hash], (err, row) => {
+      if (err) {
+        // res.status(400).send({ code: 400, message: err });
+        if (err.code == "SQLITE_CONSTRAINT") {
+          res.status(403);
+          res.status({ status: "error", message: "User already exists" });
+        } else {
+          res.status(500);
+          res.send({ status: "error", message: "Something  went wrong" });
+        }
+        console.error(err.code);
+      } else {
+        res.status(201).json("All good!");
+      }
+    });
   } catch (e) {
     res.status(400).json("Something broke!");
   }
